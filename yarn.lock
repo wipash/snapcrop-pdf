@@ -2848,38 +2848,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pdf-cropper@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "pdf-cropper@workspace:."
-  dependencies:
-    "@radix-ui/react-slider": "npm:^1.2.0"
-    "@radix-ui/react-slot": "npm:^1.1.0"
-    "@types/node": "npm:^20.14.10"
-    "@types/react": "npm:^18.3.3"
-    "@types/react-dom": "npm:^18.3.0"
-    "@typescript-eslint/eslint-plugin": "npm:^7.13.1"
-    "@typescript-eslint/parser": "npm:^7.13.1"
-    "@vitejs/plugin-react-swc": "npm:^3.5.0"
-    autoprefixer: "npm:^10.4.19"
-    class-variance-authority: "npm:^0.7.0"
-    clsx: "npm:^2.1.1"
-    eslint: "npm:^8.57.0"
-    eslint-plugin-react-hooks: "npm:^4.6.2"
-    eslint-plugin-react-refresh: "npm:^0.4.7"
-    lucide-react: "npm:^0.408.0"
-    pdf-lib: "npm:^1.17.1"
-    pdfjs-dist: "npm:^4.4.168"
-    postcss: "npm:^8.4.39"
-    react: "npm:^18.3.1"
-    react-dom: "npm:^18.3.1"
-    tailwind-merge: "npm:^2.4.0"
-    tailwindcss: "npm:^3.4.5"
-    tailwindcss-animate: "npm:^1.0.7"
-    typescript: "npm:^5.2.2"
-    vite: "npm:^5.3.1"
-  languageName: unknown
-  linkType: soft
-
 "pdf-lib@npm:^1.17.1":
   version: 1.17.1
   resolution: "pdf-lib@npm:1.17.1"
@@ -3343,6 +3311,38 @@ __metadata:
   checksum: 10c0/a16775323e1404dd43fabafe7460be13a471e021637bc7889468eb45ce6a6b207261f454e4e530a19500cc962c4cc5348583520843b363f4193cee5c00e1e539
   languageName: node
   linkType: hard
+
+"snapcrop-pdf@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "snapcrop-pdf@workspace:."
+  dependencies:
+    "@radix-ui/react-slider": "npm:^1.2.0"
+    "@radix-ui/react-slot": "npm:^1.1.0"
+    "@types/node": "npm:^20.14.10"
+    "@types/react": "npm:^18.3.3"
+    "@types/react-dom": "npm:^18.3.0"
+    "@typescript-eslint/eslint-plugin": "npm:^7.13.1"
+    "@typescript-eslint/parser": "npm:^7.13.1"
+    "@vitejs/plugin-react-swc": "npm:^3.5.0"
+    autoprefixer: "npm:^10.4.19"
+    class-variance-authority: "npm:^0.7.0"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^8.57.0"
+    eslint-plugin-react-hooks: "npm:^4.6.2"
+    eslint-plugin-react-refresh: "npm:^0.4.7"
+    lucide-react: "npm:^0.408.0"
+    pdf-lib: "npm:^1.17.1"
+    pdfjs-dist: "npm:^4.4.168"
+    postcss: "npm:^8.4.39"
+    react: "npm:^18.3.1"
+    react-dom: "npm:^18.3.1"
+    tailwind-merge: "npm:^2.4.0"
+    tailwindcss: "npm:^3.4.5"
+    tailwindcss-animate: "npm:^1.0.7"
+    typescript: "npm:^5.2.2"
+    vite: "npm:^5.3.1"
+  languageName: unknown
+  linkType: soft
 
 "socks-proxy-agent@npm:^8.0.3":
   version: 8.0.4
