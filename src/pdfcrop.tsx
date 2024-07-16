@@ -13,6 +13,8 @@ const PDFCropInterface: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [leftCrop, setLeftCrop] = useState(0);
   const [rightCrop, setRightCrop] = useState(0);
+  const [topCrop, setTopCrop] = useState(0);
+  const [bottomCrop, setBottomCrop] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
@@ -103,16 +105,19 @@ const PDFCropInterface: React.FC = () => {
 
         const leftCropPoint = (leftCrop / 100) * width;
         const rightCropPoint = ((100 - rightCrop) / 100) * width;
+        const topCropPoint = (topCrop / 100) * height;
+        const bottomCropPoint = ((100 - bottomCrop) / 100) * height;
 
-        // Calculate the new width after cropping
+        // Calculate the new dimensions after cropping
         const newWidth = rightCropPoint - leftCropPoint;
+        const newHeight = bottomCropPoint - topCropPoint;
 
-        // Create a new page with the cropped width
-        const newPage = pdfDoc.addPage([newWidth, height]);
+        // Create a new page with the cropped dimensions
+        const newPage = pdfDoc.addPage([newWidth, newHeight]);
 
         newPage.drawPage(embeddedPage, {
           x: -leftCropPoint,
-          y: 0,
+          y: newHeight - height + topCropPoint, // Adjust y-coordinate for vertical cropping
           width: width,
           height: height,
         });
@@ -133,7 +138,6 @@ const PDFCropInterface: React.FC = () => {
       }
     }
   };
-
 
   return (
     <div className="p-4 max-w-xl mx-auto">
@@ -165,6 +169,7 @@ const PDFCropInterface: React.FC = () => {
       {pdfDocument && !isLoading && (
         <>
           <div className="mb-4">
+            <p className="font-bold mb-2">Horizontal Crop</p>
             <Slider
               min={0}
               max={100}
@@ -178,8 +183,27 @@ const PDFCropInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Left crop: {leftCrop}%</span>
-            <span>Right crop: {rightCrop}%</span>
+            <span>Left: {leftCrop}%</span>
+            <span>Right: {rightCrop}%</span>
+          </div>
+
+          <div className="mb-4">
+            <p className="font-bold mb-2">Vertical Crop</p>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[topCrop, 100 - bottomCrop]}
+              onValueChange={([top, bottom]) => {
+                setTopCrop(top);
+                setBottomCrop(100 - bottom);
+              }}
+            />
+          </div>
+
+          <div className="flex justify-between mb-4">
+            <span>Top: {topCrop}%</span>
+            <span>Bottom: {bottomCrop}%</span>
           </div>
 
           <div className="flex justify-between items-center mb-4">
@@ -199,6 +223,14 @@ const PDFCropInterface: React.FC = () => {
 
           <div className="bg-gray-200 mb-4 relative">
             <canvas ref={canvasRef} className="max-w-full h-auto" />
+            <div
+              className="absolute top-0 left-0 right-0 bg-black bg-opacity-50"
+              style={{ height: `${topCrop}%` }}
+            />
+            <div
+              className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50"
+              style={{ height: `${bottomCrop}%` }}
+            />
             <div
               className="absolute top-0 bottom-0 left-0 bg-black bg-opacity-50"
               style={{ width: `${leftCrop}%` }}
