@@ -137,7 +137,7 @@ const PDFCropInterface: React.FC = () => {
 
   return (
     <div className="p-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">PDF Crop Interface</h1>
+      <h1 className="text-2xl font-bold mb-4">📄✂️ SnapCrop PDF</h1>
 
       <div className="mb-4">
         <label htmlFor="pdf-upload" className="cursor-pointer">
