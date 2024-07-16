@@ -4,6 +4,8 @@
 
 SnapCrop PDF is a sleek, user-friendly web application that empowers users to swiftly crop PDF documents. With its intuitive interface and real-time preview, SnapCrop PDF transforms the tedious task of removing unwanted margins into a seamless experience.
 
+![SnapCrop PDF Demo](.github/screenshot.png)
+
 ---
 
 ## ✨ Features
@@ -76,7 +78,7 @@ SnapCrop PDF is a sleek, user-friendly web application that empowers users to sw
 
 ## 📜 License
 
-SnapCrop PDF is open source software [licensed as MIT](LICENSE.md).
+SnapCrop PDF is open source software [licensed as MIT](LICENSE).
 
 
 ---
