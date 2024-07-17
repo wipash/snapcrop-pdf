@@ -8,7 +8,7 @@ http:
   http://localhost:
     status: 200
     timeout: 5000
-    content:
+    body:
       - "<!DOCTYPE html>"
 
 process:
