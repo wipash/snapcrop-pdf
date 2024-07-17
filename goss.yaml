@@ -1,0 +1,26 @@
+port:
+  tcp:80:
+    listening: true
+    ip:
+      - 0.0.0.0
+
+http:
+  http://localhost:
+    status: 200
+    timeout: 5000
+    content:
+      - "<!DOCTYPE html>"
+
+process:
+  nginx:
+    running: true
+
+file:
+  /usr/share/nginx/html/index.html:
+    exists: true
+    mode: "0644"
+    owner: root
+    group: root
+    filetype: file
+    contains:
+      - "<title>"
