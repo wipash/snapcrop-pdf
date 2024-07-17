@@ -47,10 +47,6 @@ jobs:
         run: |
           dgoss run ghcr.io/${{ github.repository }}:latest
 
-        with:
-          goss-file: ./goss.yaml
-          image: ghcr.io/${{ github.repository }}:latest
-
       - name: Push image to GHCR
         if: success() && github.event_name != 'pull_request'
         uses: docker/build-push-action@v4
