@@ -17,7 +17,7 @@ COPY . .
 RUN yarn install && yarn build
 
 # Production stage
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:alpine
 
 # Copy the built assets from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
