@@ -1,11 +1,11 @@
 port:
-  tcp:80:
+  tcp:8080:
     listening: true
     ip:
       - 0.0.0.0
 
 http:
-  http://localhost:
+  http://localhost:8080:
     status: 200
 
 process:
