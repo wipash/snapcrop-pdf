@@ -22,6 +22,7 @@ const PDFCropInterface: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pageRange, setPageRange] = useState<[number, number]>([1, 1]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderPage = useCallback(
@@ -55,10 +56,27 @@ const PDFCropInterface: React.FC = () => {
   );
 
   useEffect(() => {
-    if (pdfDocument) {
+    if (
+      pdfDocument &&
+      currentPage >= pageRange[0] &&
+      currentPage <= pageRange[1]
+    ) {
       renderPage(currentPage);
+    } else if (currentPage < pageRange[0]) {
+      setCurrentPage(pageRange[0]);
+    } else if (currentPage > pageRange[1]) {
+      setCurrentPage(pageRange[1]);
     }
-  }, [currentPage, pdfDocument, renderPage]);
+  }, [currentPage, pdfDocument, renderPage, pageRange]);
+
+  const changePage = (delta: number) => {
+    setCurrentPage((prev) => {
+      const newPage = prev + delta;
+      return newPage >= pageRange[0] && newPage <= pageRange[1]
+        ? newPage
+        : prev;
+    });
+  };
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -74,6 +92,7 @@ const PDFCropInterface: React.FC = () => {
         setPdfDocument(pdf);
         setTotalPages(pdf.numPages);
         setCurrentPage(1);
+        setPageRange([1, pdf.numPages]);
       } catch (error) {
         console.error("Error loading PDF:", error);
         setError(
@@ -150,12 +169,8 @@ const PDFCropInterface: React.FC = () => {
     });
     const newPdfDoc = await PDFDocument.create();
 
-    const pageCount = pdfDoc.getPageCount();
-
-    for (let i = 0; i < pageCount; i++) {
-      setProcessingStatus(
-        `Processing page ${i + 1} of ${pageCount} (PDF-based method)...`
-      );
+    for (let i = pageRange[0] - 1; i < pageRange[1]; i++) {
+      setProcessingStatus(`Processing page ${i + 1} of ${pageRange[1]}...`);
 
       const [embeddedPage] = await newPdfDoc.embedPages([pdfDoc.getPage(i)]);
       const { width, height } = embeddedPage.scale(1);
@@ -188,12 +203,8 @@ const PDFCropInterface: React.FC = () => {
       .promise;
     const newPdfDoc = await PDFDocument.create();
 
-    const pageCount = pdfDocument.numPages;
-
-    for (let i = 1; i <= pageCount; i++) {
-      setProcessingStatus(
-        `Processing page ${i} of ${pageCount} (Image-based method)...`
-      );
+    for (let i = pageRange[0] - 1; i < pageRange[1]; i++) {
+      setProcessingStatus(`Processing page ${i + 1} of ${pageRange[1]}...`);
 
       const page = await pdfDocument.getPage(i);
       const imageData = await renderPageToImage(page);
@@ -218,13 +229,6 @@ const PDFCropInterface: React.FC = () => {
     }
 
     return newPdfDoc.save();
-  };
-
-  const changePage = (delta: number) => {
-    setCurrentPage((prev) => {
-      const newPage = prev + delta;
-      return newPage > 0 && newPage <= totalPages ? newPage : prev;
-    });
   };
 
   const handleCrop = async () => {
@@ -304,6 +308,20 @@ const PDFCropInterface: React.FC = () => {
       {pdfDocument && !isLoading && (
         <>
           <div className="mb-4">
+            <p className="font-bold mb-2">Page Range</p>
+            <Slider
+              min={1}
+              max={totalPages}
+              step={1}
+              value={pageRange}
+              onValueChange={(value) => setPageRange(value as [number, number])}
+            />
+            <div className="flex justify-between mt-2">
+              <span>Start: Page {pageRange[0]}</span>
+              <span>End: Page {pageRange[1]}</span>
+            </div>
+          </div>
+          <div className="mb-4">
             <p className="font-bold mb-2">Horizontal Crop</p>
             <Slider
               min={0}
@@ -356,26 +374,31 @@ const PDFCropInterface: React.FC = () => {
             </Button>
           </div>
 
-          <div className="bg-gray-200 mb-4 relative">
-            <canvas ref={canvasRef} className="max-w-full h-auto" />
-            <div
-              className="absolute top-0 left-0 right-0 bg-black bg-opacity-50"
-              style={{ height: `${topCrop}%` }}
-            />
-            <div
-              className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50"
-              style={{ height: `${bottomCrop}%` }}
-            />
-            <div
-              className="absolute top-0 bottom-0 left-0 bg-black bg-opacity-50"
-              style={{ width: `${leftCrop}%` }}
-            />
-            <div
-              className="absolute top-0 bottom-0 right-0 bg-black bg-opacity-50"
-              style={{ width: `${rightCrop}%` }}
-            />
-          </div>
-
+          {currentPage >= pageRange[0] && currentPage <= pageRange[1] ? (
+            <div className="bg-gray-200 mb-4 relative">
+              <canvas ref={canvasRef} className="max-w-full h-auto" />
+              <div
+                className="absolute top-0 left-0 right-0 bg-black bg-opacity-50"
+                style={{ height: `${topCrop}%` }}
+              />
+              <div
+                className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50"
+                style={{ height: `${bottomCrop}%` }}
+              />
+              <div
+                className="absolute top-0 bottom-0 left-0 bg-black bg-opacity-50"
+                style={{ width: `${leftCrop}%` }}
+              />
+              <div
+                className="absolute top-0 bottom-0 right-0 bg-black bg-opacity-50"
+                style={{ width: `${rightCrop}%` }}
+              />
+            </div>
+          ) : (
+            <div className="bg-gray-200 mb-4 p-4 text-center">
+              This page is not in the selected range.
+            </div>
+          )}
           <Button
             onClick={handleCrop}
             className="w-full"
