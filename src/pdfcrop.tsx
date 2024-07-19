@@ -21,6 +21,7 @@ const PDFCropInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderPage = useCallback(
@@ -231,6 +232,7 @@ const PDFCropInterface: React.FC = () => {
 
     setProcessingStatus("Preparing to crop PDF...");
     setError(null);
+    setIsProcessing(true);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -266,6 +268,8 @@ const PDFCropInterface: React.FC = () => {
         }`
       );
       setProcessingStatus("");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -273,6 +277,7 @@ const PDFCropInterface: React.FC = () => {
     <div className="p-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">📄✂️ SnapCrop PDF</h1>
 
+      {/* File upload section */}
       <div className="mb-4">
         <label htmlFor="pdf-upload" className="cursor-pointer">
           <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg">
@@ -313,8 +318,8 @@ const PDFCropInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Left: {leftCrop}%</span>
-            <span>Right: {rightCrop}%</span>
+            <span>Left: {leftCrop.toFixed(1)}%</span>
+            <span>Right: {rightCrop.toFixed(1)}%</span>
           </div>
 
           <div className="mb-4">
@@ -332,8 +337,8 @@ const PDFCropInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Top: {topCrop}%</span>
-            <span>Bottom: {bottomCrop}%</span>
+            <span>Top: {topCrop.toFixed(1)}%</span>
+            <span>Bottom: {bottomCrop.toFixed(1)}%</span>
           </div>
 
           <div className="flex justify-between items-center mb-4">
@@ -371,9 +376,19 @@ const PDFCropInterface: React.FC = () => {
             />
           </div>
 
-          <Button onClick={handleCrop} className="w-full">
-            Crop and Download PDF
+          <Button
+            onClick={handleCrop}
+            className="w-full"
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Processing..." : "Crop and Download PDF"}
           </Button>
+
+          {processingStatus && (
+            <div className="mt-4 p-2 bg-blue-100 text-blue-700 rounded">
+              {processingStatus}
+            </div>
+          )}
         </>
       )}
     </div>
