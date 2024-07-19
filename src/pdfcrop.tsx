@@ -169,8 +169,8 @@ const PDFCropInterface: React.FC = () => {
     });
     const newPdfDoc = await PDFDocument.create();
 
-    for (let i = pageRange[0] - 1; i < pageRange[1]; i++) {
-      setProcessingStatus(`Processing page ${i + 1} of ${pageRange[1]}...`);
+    for (let i = pageRange[0]; i <= pageRange[1]; i++) {
+      setProcessingStatus(`Processing page ${i} of ${pageRange[1]}...`);
 
       const [embeddedPage] = await newPdfDoc.embedPages([pdfDoc.getPage(i)]);
       const { width, height } = embeddedPage.scale(1);
@@ -192,7 +192,7 @@ const PDFCropInterface: React.FC = () => {
         height: height,
       });
     }
-
+    setProcessingStatus("Finalizing document...");
     return newPdfDoc.save();
   };
 
@@ -203,8 +203,8 @@ const PDFCropInterface: React.FC = () => {
       .promise;
     const newPdfDoc = await PDFDocument.create();
 
-    for (let i = pageRange[0] - 1; i < pageRange[1]; i++) {
-      setProcessingStatus(`Processing page ${i + 1} of ${pageRange[1]}...`);
+    for (let i = pageRange[0]; i <= pageRange[1]; i++) {
+      setProcessingStatus(`Processing page ${i} of ${pageRange[1]}...`);
 
       const page = await pdfDocument.getPage(i);
       const imageData = await renderPageToImage(page);
@@ -227,7 +227,7 @@ const PDFCropInterface: React.FC = () => {
         height: height,
       });
     }
-
+    setProcessingStatus("Finalizing document...");
     return newPdfDoc.save();
   };
 
@@ -256,7 +256,6 @@ const PDFCropInterface: React.FC = () => {
         pdfBytes = await handleCropImageBased(arrayBuffer);
       }
 
-      setProcessingStatus("Finalizing document...");
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
