@@ -20,6 +20,7 @@ const PDFCropInterface: React.FC = () => {
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderPage = useCallback(
@@ -74,13 +75,148 @@ const PDFCropInterface: React.FC = () => {
         setCurrentPage(1);
       } catch (error) {
         console.error("Error loading PDF:", error);
-        setError("Failed to load PDF. Please try again.");
+        setError(
+          "Failed to load PDF. The file might be corrupted or password-protected."
+        );
       } finally {
         setIsLoading(false);
       }
     } else {
       setError("Please upload a valid PDF file.");
     }
+  };
+
+  const renderPageToImage = async (
+    page: pdfjsLib.PDFPageProxy,
+    scale: number = 4
+  ): Promise<string> => {
+    const viewport = page.getViewport({ scale });
+    const canvas = canvasRef.current;
+    if (!canvas) throw new Error("Canvas not available");
+
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Unable to get canvas context");
+
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+
+    return canvas.toDataURL("image/png", 1.0);
+  };
+
+  const cropImage = (
+    imageData: string,
+    crop: { left: number; right: number; top: number; bottom: number }
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Unable to get canvas context");
+
+        const cropWidth = img.width * (1 - crop.left / 100 - crop.right / 100);
+        const cropHeight =
+          img.height * (1 - crop.top / 100 - crop.bottom / 100);
+
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+
+        ctx.drawImage(
+          img,
+          img.width * (crop.left / 100),
+          img.height * (crop.top / 100),
+          cropWidth,
+          cropHeight,
+          0,
+          0,
+          cropWidth,
+          cropHeight
+        );
+
+        resolve(canvas.toDataURL("image/png", 1.0));
+      };
+      img.src = imageData;
+    });
+  };
+
+  const handleCropPDFBased = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<Uint8Array> => {
+    const pdfDoc = await PDFDocument.load(arrayBuffer, {
+      ignoreEncryption: true,
+    });
+    const newPdfDoc = await PDFDocument.create();
+
+    const pageCount = pdfDoc.getPageCount();
+
+    for (let i = 0; i < pageCount; i++) {
+      setProcessingStatus(
+        `Processing page ${i + 1} of ${pageCount} (PDF-based method)...`
+      );
+
+      const [embeddedPage] = await newPdfDoc.embedPages([pdfDoc.getPage(i)]);
+      const { width, height } = embeddedPage.scale(1);
+
+      const leftCropPoint = (leftCrop / 100) * width;
+      const rightCropPoint = ((100 - rightCrop) / 100) * width;
+      const topCropPoint = (topCrop / 100) * height;
+      const bottomCropPoint = ((100 - bottomCrop) / 100) * height;
+
+      const newWidth = rightCropPoint - leftCropPoint;
+      const newHeight = bottomCropPoint - topCropPoint;
+
+      const newPage = newPdfDoc.addPage([newWidth, newHeight]);
+
+      newPage.drawPage(embeddedPage, {
+        x: -leftCropPoint,
+        y: newHeight - height + topCropPoint,
+        width: width,
+        height: height,
+      });
+    }
+
+    return newPdfDoc.save();
+  };
+
+  const handleCropImageBased = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<Uint8Array> => {
+    const pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer })
+      .promise;
+    const newPdfDoc = await PDFDocument.create();
+
+    const pageCount = pdfDocument.numPages;
+
+    for (let i = 1; i <= pageCount; i++) {
+      setProcessingStatus(
+        `Processing page ${i} of ${pageCount} (Image-based method)...`
+      );
+
+      const page = await pdfDocument.getPage(i);
+      const imageData = await renderPageToImage(page);
+
+      const croppedImageData = await cropImage(imageData, {
+        left: leftCrop,
+        right: rightCrop,
+        top: topCrop,
+        bottom: bottomCrop,
+      });
+
+      const pngImage = await newPdfDoc.embedPng(croppedImageData);
+      const { width, height } = pngImage.scale(1);
+
+      const newPage = newPdfDoc.addPage([width, height]);
+      newPage.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: width,
+        height: height,
+      });
+    }
+
+    return newPdfDoc.save();
   };
 
   const changePage = (delta: number) => {
@@ -91,51 +227,45 @@ const PDFCropInterface: React.FC = () => {
   };
 
   const handleCrop = async () => {
-    if (!pdfDocument || !file) return;
+    if (!file) return;
+
+    setProcessingStatus("Preparing to crop PDF...");
+    setError(null);
 
     try {
-      const pdfDoc = await PDFDocument.create();
-      const originalPdfDoc = await PDFDocument.load(await file.arrayBuffer(), {
-        ignoreEncryption: true
-      });
+      const arrayBuffer = await file.arrayBuffer();
 
-      for (let i = 0; i < originalPdfDoc.getPageCount(); i++) {
-        const [embeddedPage] = await pdfDoc.embedPdf(originalPdfDoc, [i]);
-        const { width, height } = embeddedPage.size();
+      let pdfBytes: Uint8Array;
 
-        const leftCropPoint = (leftCrop / 100) * width;
-        const rightCropPoint = ((100 - rightCrop) / 100) * width;
-        const topCropPoint = (topCrop / 100) * height;
-        const bottomCropPoint = ((100 - bottomCrop) / 100) * height;
+      try {
+        // First, try the PDF-based method
+        pdfBytes = await handleCropPDFBased(arrayBuffer);
+      } catch (pdfError) {
+        console.error("PDF-based method failed:", pdfError);
+        setProcessingStatus(
+          "PDF-based method failed. Falling back to image-based method..."
+        );
 
-        // Calculate the new dimensions after cropping
-        const newWidth = rightCropPoint - leftCropPoint;
-        const newHeight = bottomCropPoint - topCropPoint;
-
-        // Create a new page with the cropped dimensions
-        const newPage = pdfDoc.addPage([newWidth, newHeight]);
-
-        newPage.drawPage(embeddedPage, {
-          x: -leftCropPoint,
-          y: newHeight - height + topCropPoint, // Adjust y-coordinate for vertical cropping
-          width: width,
-          height: height,
-        });
+        // If PDF-based method fails, fall back to image-based method
+        pdfBytes = await handleCropImageBased(arrayBuffer);
       }
 
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const link = document.createElement('a');
+      setProcessingStatus("Finalizing document...");
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = 'cropped_document.pdf';
+      link.download = "cropped_document.pdf";
       link.click();
+
+      setProcessingStatus("Cropping complete. Document saved.");
     } catch (error) {
-      console.error('Error cropping PDF:', error);
-      if (error instanceof Error) {
-        setError(`Failed to crop PDF: ${error.message}`);
-      } else {
-        setError('Failed to crop PDF. Please try again.');
-      }
+      console.error("Error cropping PDF:", error);
+      setError(
+        `Failed to crop PDF: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      setProcessingStatus("");
     }
   };
 
@@ -173,7 +303,7 @@ const PDFCropInterface: React.FC = () => {
             <Slider
               min={0}
               max={100}
-              step={1}
+              step={0.1}
               value={[leftCrop, 100 - rightCrop]}
               onValueChange={([left, right]) => {
                 setLeftCrop(left);
@@ -192,7 +322,7 @@ const PDFCropInterface: React.FC = () => {
             <Slider
               min={0}
               max={100}
-              step={1}
+              step={0.1}
               value={[topCrop, 100 - bottomCrop]}
               onValueChange={([top, bottom]) => {
                 setTopCrop(top);
