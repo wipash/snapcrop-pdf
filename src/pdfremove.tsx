@@ -117,30 +117,36 @@ const PDFTextRemovalInterface: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const newPdfDoc = await PDFDocument.create();
 
       for (let i = pageRange[0] - 1; i < pageRange[1]; i++) {
         setProcessingStatus(`Processing page ${i + 1} of ${pageRange[1]}...`);
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
+        const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [i]);
+        const { width, height } = copiedPage.getSize();
 
-        // Define the rectangles for text removal
-        const topRect = { x: 0, y: height - topMargin, width: width, height: topMargin };
-        const bottomRect = { x: 0, y: 0, width: width, height: bottomMargin };
-        const leftRect = { x: 0, y: 0, width: leftMargin, height: height };
-        const rightRect = { x: width - rightMargin, y: 0, width: rightMargin, height: height };
+        // Calculate redaction areas
+        const topRedaction = { x: 0, y: height - (topMargin / 100 * height), width: width, height: topMargin / 100 * height };
+        const bottomRedaction = { x: 0, y: 0, width: width, height: bottomMargin / 100 * height };
+        const leftRedaction = { x: 0, y: 0, width: leftMargin / 100 * width, height: height };
+        const rightRedaction = { x: width - (rightMargin / 100 * width), y: 0, width: rightMargin / 100 * width, height: height };
 
-        // Remove text from these areas
-        for (const rect of [topRect, bottomRect, leftRect, rightRect]) {
-          page.drawRectangle({
-            ...rect,
-            color: rgb(1,1,1), // White color
+        // Apply redactions
+        for (const redaction of [topRedaction, bottomRedaction, leftRedaction, rightRedaction]) {
+          copiedPage.drawRectangle({
+            x: redaction.x,
+            y: redaction.y,
+            width: redaction.width,
+            height: redaction.height,
+            color: rgb(1, 1, 1), // White color
             opacity: 1,
           });
         }
+
+        newPdfDoc.addPage(copiedPage);
       }
 
       setProcessingStatus("Finalizing document...");
-      const pdfBytes = await pdfDoc.save();
+      const pdfBytes = await newPdfDoc.save();
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -208,51 +214,41 @@ const PDFTextRemovalInterface: React.FC = () => {
           </div>
 
           <div className="mb-4">
-            <p className="font-bold mb-2">Left Margin</p>
+            <p className="font-bold mb-2">Horizontal Margin</p>
             <Slider
               min={0}
               max={100}
-              step={1}
-              value={[leftMargin]}
-              onValueChange={([value]) => setLeftMargin(value)}
+              step={0.1}
+              value={[leftMargin, 100 - rightMargin]}
+              onValueChange={([left, right]) => {
+                setLeftMargin(left);
+                setRightMargin(100 - right);
+              }}
             />
-            <span>Left Margin: {leftMargin}px</span>
+          </div>
+
+          <div className="flex justify-between mb-4">
+            <span>Left: {leftMargin.toFixed(1)}%</span>
+            <span>Right: {rightMargin.toFixed(1)}%</span>
           </div>
 
           <div className="mb-4">
-            <p className="font-bold mb-2">Right Margin</p>
+            <p className="font-bold mb-2">Vertical Margin</p>
             <Slider
               min={0}
               max={100}
-              step={1}
-              value={[rightMargin]}
-              onValueChange={([value]) => setRightMargin(value)}
+              step={0.1}
+              value={[topMargin, 100 - bottomMargin]}
+              onValueChange={([top, bottom]) => {
+                setTopMargin(top);
+                setBottomMargin(100 - bottom);
+              }}
             />
-            <span>Right Margin: {rightMargin}px</span>
           </div>
 
-          <div className="mb-4">
-            <p className="font-bold mb-2">Top Margin</p>
-            <Slider
-              min={0}
-              max={100}
-              step={1}
-              value={[topMargin]}
-              onValueChange={([value]) => setTopMargin(value)}
-            />
-            <span>Top Margin: {topMargin}px</span>
-          </div>
-
-          <div className="mb-4">
-            <p className="font-bold mb-2">Bottom Margin</p>
-            <Slider
-              min={0}
-              max={100}
-              step={1}
-              value={[bottomMargin]}
-              onValueChange={([value]) => setBottomMargin(value)}
-            />
-            <span>Bottom Margin: {bottomMargin}px</span>
+          <div className="flex justify-between mb-4">
+            <span>Top: {topMargin.toFixed(1)}%</span>
+            <span>Bottom: {bottomMargin.toFixed(1)}%</span>
           </div>
 
           {/* Page navigation buttons (reuse from PDFCropInterface) */}
