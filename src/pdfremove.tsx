@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Upload } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, rgb } from "pdf-lib";
@@ -11,10 +12,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 const PDFTextRemovalInterface: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [leftMargin, setLeftMargin] = useState(50);
-  const [rightMargin, setRightMargin] = useState(50);
-  const [topMargin, setTopMargin] = useState(50);
-  const [bottomMargin, setBottomMargin] = useState(50);
+  const [leftMargin, setLeftMargin] = useState(0);
+  const [rightMargin, setRightMargin] = useState(0);
+  const [topMargin, setTopMargin] = useState(0);
+  const [bottomMargin, setBottomMargin] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
@@ -23,6 +24,8 @@ const PDFTextRemovalInterface: React.FC = () => {
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [pageRange, setPageRange] = useState<[number, number]>([1, 1]);
+  const [startPageInput, setStartPageInput] = useState("1");
+  const [endPageInput, setEndPageInput] = useState("1");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderPage = useCallback(
@@ -106,6 +109,44 @@ const PDFTextRemovalInterface: React.FC = () => {
     }
   };
 
+  const handleMarginChange = (
+    value: number,
+    setter: React.Dispatch<React.SetStateAction<number>>
+  ) => {
+    if (value >= 0 && value <= 100) {
+      setter(value);
+    }
+  };
+
+  const handlePageRangeChange = (value: [number, number]) => {
+    if (
+      value[0] >= 1 &&
+      value[0] <= totalPages &&
+      value[1] >= value[0] &&
+      value[1] <= totalPages
+    ) {
+      setPageRange(value);
+      setStartPageInput(value[0].toString());
+      setEndPageInput(value[1].toString());
+    }
+  };
+
+  const handlePageInputChange = (value: string, isStart: boolean) => {
+    if (isStart) {
+      setStartPageInput(value);
+    } else {
+      setEndPageInput(value);
+    }
+
+    const numValue = parseInt(value, 10);
+    if (!isNaN(numValue)) {
+      if (isStart) {
+        handlePageRangeChange([numValue, pageRange[1]]);
+      } else {
+        handlePageRangeChange([pageRange[0], numValue]);
+      }
+    }
+  };
 
   const handleRemoveText = async () => {
     if (!file) return;
@@ -125,13 +166,38 @@ const PDFTextRemovalInterface: React.FC = () => {
         const { width, height } = copiedPage.getSize();
 
         // Calculate redaction areas
-        const topRedaction = { x: 0, y: height - (topMargin / 100 * height), width: width, height: topMargin / 100 * height };
-        const bottomRedaction = { x: 0, y: 0, width: width, height: bottomMargin / 100 * height };
-        const leftRedaction = { x: 0, y: 0, width: leftMargin / 100 * width, height: height };
-        const rightRedaction = { x: width - (rightMargin / 100 * width), y: 0, width: rightMargin / 100 * width, height: height };
+        const topRedaction = {
+          x: 0,
+          y: height - (topMargin / 100) * height,
+          width: width,
+          height: (topMargin / 100) * height,
+        };
+        const bottomRedaction = {
+          x: 0,
+          y: 0,
+          width: width,
+          height: (bottomMargin / 100) * height,
+        };
+        const leftRedaction = {
+          x: 0,
+          y: 0,
+          width: (leftMargin / 100) * width,
+          height: height,
+        };
+        const rightRedaction = {
+          x: width - (rightMargin / 100) * width,
+          y: 0,
+          width: (rightMargin / 100) * width,
+          height: height,
+        };
 
         // Apply redactions
-        for (const redaction of [topRedaction, bottomRedaction, leftRedaction, rightRedaction]) {
+        for (const redaction of [
+          topRedaction,
+          bottomRedaction,
+          leftRedaction,
+          rightRedaction,
+        ]) {
           copiedPage.drawRectangle({
             x: redaction.x,
             y: redaction.y,
@@ -150,7 +216,10 @@ const PDFTextRemovalInterface: React.FC = () => {
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "text_removed_document.pdf";
+
+      const originalName = file.name.replace(".pdf", "");
+      link.download = `${originalName}-textremoved.pdf`;
+
       link.click();
 
       setProcessingStatus("Text removal complete. Document saved.");
@@ -205,11 +274,31 @@ const PDFTextRemovalInterface: React.FC = () => {
               max={totalPages}
               step={1}
               value={pageRange}
-              onValueChange={(value) => setPageRange(value as [number, number])}
+              onValueChange={(value) => handlePageRangeChange(value as [number, number])}
             />
             <div className="flex justify-between mt-2">
-              <span>Start: Page {pageRange[0]}</span>
-              <span>End: Page {pageRange[1]}</span>
+              <Input
+                type="text"
+                value={startPageInput}
+                onChange={(e) => handlePageInputChange(e.target.value, true)}
+                onBlur={() => {
+                  if (startPageInput === "" || isNaN(parseInt(startPageInput, 10))) {
+                    setStartPageInput(pageRange[0].toString());
+                  }
+                }}
+                className="w-20"
+              />
+              <Input
+                type="text"
+                value={endPageInput}
+                onChange={(e) => handlePageInputChange(e.target.value, false)}
+                onBlur={() => {
+                  if (startPageInput === "" || isNaN(parseInt(startPageInput, 10))) {
+                    setStartPageInput(pageRange[0].toString());
+                  }
+                }}
+                className="w-20"
+              />
             </div>
           </div>
 
@@ -228,8 +317,26 @@ const PDFTextRemovalInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Left: {leftMargin.toFixed(1)}%</span>
-            <span>Right: {rightMargin.toFixed(1)}%</span>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={leftMargin}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setLeftMargin)
+              }
+              className="w-20"
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={rightMargin}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setRightMargin)
+              }
+              className="w-20"
+            />
           </div>
 
           <div className="mb-4">
@@ -247,8 +354,26 @@ const PDFTextRemovalInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Top: {topMargin.toFixed(1)}%</span>
-            <span>Bottom: {bottomMargin.toFixed(1)}%</span>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={topMargin}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setTopMargin)
+              }
+              className="w-20"
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={bottomMargin}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setBottomMargin)
+              }
+              className="w-20"
+            />
           </div>
 
           {/* Page navigation buttons (reuse from PDFCropInterface) */}

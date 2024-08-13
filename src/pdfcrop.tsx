@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Upload } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument } from "pdf-lib";
@@ -103,6 +104,15 @@ const PDFCropInterface: React.FC = () => {
       }
     } else {
       setError("Please upload a valid PDF file.");
+    }
+  };
+
+  const handleMarginChange = (
+    value: number,
+    setter: React.Dispatch<React.SetStateAction<number>>
+  ) => {
+    if (value >= 0 && value <= 100) {
+      setter(value);
     }
   };
 
@@ -259,7 +269,10 @@ const PDFCropInterface: React.FC = () => {
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "cropped_document.pdf";
+
+      const originalName = file.name.replace(".pdf", "");
+      link.download = `${originalName}-textremoved.pdf`;
+
       link.click();
 
       setProcessingStatus("Cropping complete. Document saved.");
@@ -278,7 +291,7 @@ const PDFCropInterface: React.FC = () => {
 
   return (
     <div className="p-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">📄✂️ SnapCrop PDF</h1>
+      <h1 className="text-2xl font-bold mb-4">📄✂️ Crop Mode</h1>
 
       {/* File upload section */}
       <div className="mb-4">
@@ -335,8 +348,26 @@ const PDFCropInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Left: {leftCrop.toFixed(1)}%</span>
-            <span>Right: {rightCrop.toFixed(1)}%</span>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={leftCrop}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setLeftCrop)
+              }
+              className="w-20"
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={rightCrop}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setRightCrop)
+              }
+              className="w-20"
+            />
           </div>
 
           <div className="mb-4">
@@ -354,8 +385,26 @@ const PDFCropInterface: React.FC = () => {
           </div>
 
           <div className="flex justify-between mb-4">
-            <span>Top: {topCrop.toFixed(1)}%</span>
-            <span>Bottom: {bottomCrop.toFixed(1)}%</span>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={topCrop}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setTopCrop)
+              }
+              className="w-20"
+            />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={bottomCrop}
+              onChange={(e) =>
+                handleMarginChange(Number(e.target.value), setBottomCrop)
+              }
+              className="w-20"
+            />
           </div>
 
           <div className="flex justify-between items-center mb-4">
